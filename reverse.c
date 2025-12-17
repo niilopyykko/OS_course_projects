@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -16,7 +17,7 @@ int main(int argc, char *argv[])
     FILE *out = stdout;
 
     // IF NO ARGUMENTS
-    if (argc == 1)
+    if (argc <= 1)
     {
         in = stdin;
     }
@@ -28,7 +29,7 @@ int main(int argc, char *argv[])
         if (in == 0)
         // IF FILE OPEN FAIL
         {
-            fprintf(stderr, "error: cannot open file 'input.txt'");
+            fprintf(stderr, "error: cannot open file 'input.txt'\n");
             exit(1);
         }
     }
@@ -46,7 +47,7 @@ int main(int argc, char *argv[])
         // IF FILE OPEN FAIL
         if (out == 0)
         {
-            fprintf(stderr, "error: cannot open file 'input.txt'");
+            fprintf(stderr, "error: cannot open file 'input.txt'\n");
             exit(1);
         }
     }
@@ -54,16 +55,10 @@ int main(int argc, char *argv[])
     // IF MORE THAN 2 ARGUMENTS
     else if (argc > 3)
     {
-        printf("usage: reverse <input> <output>");
+        printf("usage: reverse <input> <output>\n");
         exit(1);
     }
 
-    // ELSE
-    else
-    {
-        printf("wery broken c-code ah yes");
-        fprintf(stderr, "whatever the error message is\n");
-    }
     fileHandling(in, out);
     fclose(in);
     fclose(out);
