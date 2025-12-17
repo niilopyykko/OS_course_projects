@@ -21,27 +21,33 @@ int main(int argc, char *argv[])
     }
 
     // IF ONLY 1 ARGUMENT //lol also works for 3 argument file read
-    else if (argc >= 2)
+    if (argc >= 2)
     {
         in = fopen(inputFileName, "r");
         if (in == 0)
+        // IF FILE OPEN FAIL
         {
-            prinf("error: cannot open file 'input.txt'");
+            fprinf(stderr, "error: cannot open file 'input.txt'");
             exit(1);
         }
-        fileHandling(FILE * in, FILE * out)
     }
 
     // IF 2 ARGUMENTS
-    else if (argc == 3)
+    if (argc == 3)
     {
-
-        inputFile = fopen(inputFileName, "r");
-        readFile(userInput);
-
-        // WRITE FILE
-        FILE *WriteFile;
-        WriteFile = fopen(outputFile, "w");
+        // COMPARE INPUT OUTPUT FILENAMES
+        if (strcmp(argv[1], argv[2]) == 0)
+        {
+            fprintf(stderr, "Input and output file must differ\n");
+            exit(1);
+        }
+        out = fopen(argv[2], "w");
+        // IF FILE OPEN FAIL
+        if (out == 0)
+        {
+            fprinf(stderr, "error: cannot open file 'input.txt'");
+            exit(1);
+        }
     }
 
     // IF MORE THAN 2 ARGUMENTS
@@ -57,20 +63,23 @@ int main(int argc, char *argv[])
         printf("wery broken c-code ah yes");
         fprintf(stderr, "whatever the error message is\n");
     }
-
-    exit(0);
-}
-
-void fileHandling(FILE *input, FILE *out)
-{
-    // OPEN FILE
-    FILE *readFile;
-    readFile = fopen(inputFileName, "r");
-
-    // READ FILE
-    getline(&buffer, &size, stdin);
-
-    // REVERSE LINES
+    fileHandling(in, out);
+    fclose(in);
+    fclose(out);
 
     return (0);
+}
+
+void fileHandling(FILE *in, FILE *out)
+{
+    char *buffer = 0;
+    size_t bufsize = 32;
+
+    // write in reverse
+    while (getline(&buffer, &bufsize, in) != -1)
+    {
+        fprintf(out, "%s", buffer);
+    }
+    free(buffer);
+    return;
 }
