@@ -68,13 +68,35 @@ int main(int argc, char *argv[])
 
 void fileHandling(FILE *in, FILE *out)
 {
-    char *buffer = 0;
-    size_t bufsize = 32;
+    char *buffer = 0;    // for getline
+    size_t bufsize = 32; // for getline
 
-    // write in reverse
+    char **lines = NULL; // pointers for lines
+    int count = 0;       // amount of read liens
+
     while (getline(&buffer, &bufsize, in) != -1)
     {
-        fprintf(out, "%s", buffer);
+        char **tmp = realloc(lines, (count + 1) * sizeof(char *));
+        if (tmp == NULL)
+        {
+            fprintf(stderr, "realloc failed\n");
+            exit(1);
+        }
+
+        lines = tmp;
+        lines[count] = malloc(strlen(buffer) + 1);
+        if (lines[count] == NULL)
+        {
+            fprintf(stderr, "malloc failed\n");
+            exit(1);
+        }
+        strcpy(lines[count], buffer);
+        count++;
+    }
+    for (int i = count - 1; i >= 0; i--)
+    {
+        fprintf(out, "%s", lines[i]);
+        free(lines[i]);
     }
     free(buffer);
     return;
