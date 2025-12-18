@@ -9,13 +9,12 @@ int main(int argc, char *argv[])
 {
     FILE *readFile;
 
-    int previousCharacter = EOF;
-    int currentCharacter = 0;
-    int counter = 0;
+    int amount = 0;
+    char character;
 
     if (argc < 2)
     {
-        printf("my-zip: file1 [file2 ...]\n");
+        printf("my-unzip: file1 [file2 ...]\n");
         return 1;
     }
 
@@ -28,31 +27,15 @@ int main(int argc, char *argv[])
             printf("my-unzip: cannot open file\n");
             exit(1);
         }
-        while ((currentCharacter = fread(currentCharacter, 1, 1, readFile)) != EOF)
+        while (fread(&amount, sizeof(int), 1, readFile) &&
+               fread(&character, sizeof(char), 1, readFile))
         {
-            if (counter == 0)
+            for (size_t i = 0; i < amount; i++)
             {
-                previousCharacter = currentCharacter;
-                counter = 1;
-            }
-            else if (previousCharacter == currentCharacter)
-            {
-                counter++;
-            }
-            else
-            {
-                fprintf(&counter, sizeof(int), 1, stdout);
-                fprintf(&previousCharacter, sizeof(char), 1, stdout);
-                previousCharacter = currentCharacter;
-                counter = 1;
+                printf("%c", character);
             }
         }
         fclose(readFile);
-    }
-    if (counter > 0)
-    {
-        fprintf(&counter, sizeof(int), 1, stdout);
-        fprintf(&previousCharacter, sizeof(char), 1, stdout);
     }
     return (0);
 }
