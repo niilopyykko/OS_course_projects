@@ -9,17 +9,17 @@ int main(int argc, char *argv[])
 {
     FILE *readFile;
 
-    char *outputfile = argv[4];
-    char currentchar;
+    int previousCharacter = EOF;
+    int currentCharacter = 0;
     int counter = 0;
 
-    if (argc <= 1)
-
+    if (argc < 2)
     {
         printf("my-zip: file1 [file2 ...]\n");
         return 1;
     }
-    for (size_t i = 2; i <= argc - 1; i++)
+
+    for (size_t i = 1; i < argc; i++)
     {
         readFile = fopen(argv[i], "r");
 
@@ -28,26 +28,31 @@ int main(int argc, char *argv[])
             printf("my-zip: cannot open file\n");
             exit(1);
         }
-        char *c = "a";
-        while (*c == fgetc(readFile))
+        while ((currentCharacter = fgetc(readFile)) != EOF)
         {
-            if (currentchar == *c)
+            if (counter == 0)
             {
-                counter += 1;
+                previousCharacter = currentCharacter;
+                counter = 1;
+            }
+            else if (previousCharacter == currentCharacter)
+            {
+                counter++;
             }
             else
             {
-                if (counter > 0)
-                {
-                    FILE *writeFile = fopen(outputfile, "w");
-                    fwrite(&counter, sizeof(int), 1, writeFile);
-                    fwrite(&currentchar, sizeof(char), 1, writeFile);
-                }
-                currentchar = *c;
+                fwrite(&counter, sizeof(int), 1, stdout);
+                fwrite(&previousCharacter, sizeof(char), 1, stdout);
+                previousCharacter = currentCharacter;
                 counter = 1;
             }
         }
         fclose(readFile);
+    }
+    if (counter > 0)
+    {
+        fwrite(&counter, sizeof(int), 1, stdout);
+        fwrite(&previousCharacter, sizeof(char), 1, stdout);
     }
     return (0);
 }
