@@ -7,41 +7,47 @@
 
 int main(int argc, char *argv[])
 {
-    char *buffer = 0;    // for getline
-    size_t bufsize = 32; // for getline
-    FILE *fp;
+    FILE *readFile;
 
-    char inputfile = argv[2];
-    char outputfile = argv[3];
+    char *outputfile = argv[4];
+    char currentchar;
+    int counter = 0;
 
     if (argc <= 1)
+
     {
-        prinf("my-zip: file1 [file2 ...]\n");
+        printf("my-zip: file1 [file2 ...]\n");
         return 1;
     }
     for (size_t i = 2; i <= argc - 1; i++)
     {
-        fp = fopen(argv[i], "r");
+        readFile = fopen(argv[i], "r");
 
-        if (fp == NULL)
+        if (readFile == NULL)
         {
             printf("my-zip: cannot open file\n");
             exit(1);
         }
-
-        while (getline(&buffer, &bufsize, fp) != -1)
+        char *c = "a";
+        while (*c == fgetc(readFile))
         {
-            int counter = 0;
-            char currentchar = buffer[i];
-            while (currentchar == buffer[i + 1])
+            if (currentchar == *c)
             {
                 counter += 1;
             }
-            FILE *fileToWriteTo = fopen(outputfile, "w");
-            fwrite("%d%c", counter, currentchar);
+            else
+            {
+                if (counter > 0)
+                {
+                    FILE *writeFile = fopen(outputfile, "w");
+                    fwrite(&counter, sizeof(int), 1, writeFile);
+                    fwrite(&currentchar, sizeof(char), 1, writeFile);
+                }
+                currentchar = *c;
+                counter = 1;
+            }
         }
-        fclose(fp);
+        fclose(readFile);
     }
-    free(buffer);
     return (0);
 }
