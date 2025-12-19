@@ -35,7 +35,7 @@ void *worker(void *arg)
     int previousCharacter = 0;
     int counter = 0;
 
-    for (int i = chunk->start; i < chunk->end; i++)
+    for (size_t i = chunk->start; i < chunk->end; i++)
     {
         int currentCharacter = chunk->data[i];
 
@@ -55,7 +55,7 @@ void *worker(void *arg)
         {
             memcpy(chunk->buff + chunk->buffsize, &counter, sizeof(int)); // last matching character or only one match
             chunk->buffsize += sizeof(int);                               // clear buffer size
-            chunk->buff[chunk->buffsize] = previousCharacter;             // reset fist item of buffer to last char
+            chunk->buff[chunk->buffsize++] = previousCharacter;           // reset fist item of buffer to last char
 
             previousCharacter = currentCharacter; // save as above, but for local variables
             counter = 1;                          // save as above, but for local variables
@@ -76,37 +76,40 @@ int main(int argc, char *argv[])
         int fd;
         char *addr;
         struct stat sb;
-        size_t filesize = sb.st_size;
 
         int availableThreads = get_nprocs(); // THIS TELLS THE PARALLELLISM^TM system how many cores/threads is available
         pthread_t workers[availableThreads];
         chunk chunks[availableThreads];
 
-        fd = open(argv[1], O_RDONLY);
+        fd = open(argv[i], O_RDONLY);
         if (fd == -1)
             perror("open");
 
         if (fstat(fd, &sb) == -1) /* To obtain file size */
             perror("fstat");
 
+        size_t filesize = sb.st_size;
         addr = mmap(NULL, filesize, PROT_READ,
-                    MAP_PRIVATE, fd, NULL);
+                    MAP_PRIVATE, fd, 0);
         if (addr == MAP_FAILED)
             perror("mmap");
 
         size_t chunk_size = filesize / availableThreads;
 
-        for (size_t i = 1; i < availableThreads; i++)
+        for (size_t i = 0; i < availableThreads; i++)
         {
             chunks[i].data = addr;
             chunks[i].start = i * chunk_size;
-            chunks[i].end = (i == availableThreads - 1);
-            chunks[i].buff = malloc(chunks[i].end - chunks[i].start + 1); // worst case scenario size for chunk lenght
+            if (i == availableThreads - 1) // IF LAST WORKER END IS END OF FILE
+                chunks[i].end = filesize;
+            else
+                chunks[i].end = chunks[i].start + chunk_size;                               // ELSE END OF CHUNK IS SIZE OF CHUNK FROM CHUNK START POSITION
+            chunks[i].buff = malloc((chunks[i].end - chunks[i].start) * (sizeof(int) + 1)); // worst case scenario size for chunk lenght
             chunks[i].buffsize = 0;
             pthread_create(&workers[i], NULL, worker, &chunks[i]);
         }
 
-        for (size_t i = 1; i < availableThreads; i++)
+        for (size_t i = 0; i < availableThreads; i++)
         {
             pthread_join(workers[i], NULL);
             write(STDOUT_FILENO, chunks[i].buff, chunks[i].buffsize);
