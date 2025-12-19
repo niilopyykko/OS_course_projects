@@ -28,10 +28,10 @@ void *worker(void *arg)
     fileSpecs *file = arg; // worker input back to chuck structure
     FILE *readFile = fopen(file->filename, "rb");
 
-    if (readFile == NULL)
+    if (!readFile)
     {
-        printf("punzip: cannot open file\n");
-        exit(1);
+        perror("punzip");
+        return NULL;
     }
 
     int amount = 0;
@@ -64,11 +64,10 @@ int main(int argc, char *argv[])
     {
         tasks[i - 1].filename = argv[i];
         pthread_create(&workers[i], NULL, worker, &tasks[i]);
-
-        for (size_t i = 0; i < argc - 1; i++)
-        {
-            pthread_join(workers[i], NULL);
-        }
+    }
+    for (size_t i = 0; i < argc - 1; i++)
+    {
+        pthread_join(workers[i], NULL);
     }
     return (0);
 }
