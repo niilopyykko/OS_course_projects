@@ -71,6 +71,12 @@ void *worker(void *arg)
 }
 int main(int argc, char *argv[])
 {
+    // variables for consolidating 2 files with common last/fist character
+
+    int pending_count = 0;
+    unsigned char pending_char = 0;
+    int has_pending = 0;
+
     for (size_t i = 1; i < argc; i++)
     {
         int fd;
@@ -100,6 +106,9 @@ int main(int argc, char *argv[])
             close(fd);
             continue;
         }
+        if (availableThreads > filesize) // limit threads to files
+            availableThreads = filesize;
+
         addr = mmap(NULL, filesize, PROT_READ,
                     MAP_PRIVATE, fd, 0);
         if (addr == MAP_FAILED)
@@ -127,8 +136,41 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < availableThreads; i++)
         {
             pthread_join(workers[i], NULL);
-            fwrite(&chunks[i].buffsize, sizeof(int), 1, stdout);
-            fwrite(&chunks[i].buff, sizeof(int), 1, stdout);
+        }
+
+        for (size_t i = 0; i < availableThreads; i++)
+        {
+            char *character = chunks[i].buff;
+            char *nextCharacter = character + chunks[i].buffsize;
+
+            while (character < nextCharacter)
+            {
+                int count;
+                unsigned char currentCharacter;
+
+                memcpy(&count, character, sizeof(int));
+                character += sizeof(int);
+
+                currentCharacter = *(unsigned char *)character;
+                character += 1;
+
+                if (has_pending && currentCharacter == pending_char)
+                {
+                    pending_count += count;
+                }
+                else
+                {
+                    if (has_pending)
+                    {
+                        fwrite(&pending_count, sizeof(int), 1, stdout);
+                        fwrite(&pending_char, 1, 1, stdout);
+                    }
+                    pending_count = count;
+                    pending_char = currentCharacter;
+                    has_pending = 1;
+                }
+            }
+
             free(chunks[i].buff);
         }
 
