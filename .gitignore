@@ -1,10 +1,11 @@
 # binaries
-reverse
+reverse_bin
 my-cat
 my-grep
 my-unzip
 my-zip
 pzip
+punzip
 # stuff
 *.o
 .vscode/

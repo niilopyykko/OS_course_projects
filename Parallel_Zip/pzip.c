@@ -5,61 +5,133 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <sys/sysinfo.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-int main(int argc, char *argv[])
+typedef struct
 {
-    FILE *readFile;
+    // FOR INPUT
+    char *data;
+    size_t start;
+    size_t end;
+
+    // worker buffer // FOR OUTPUT
+    char *buff;
+    size_t buffsize;
+
+} chunk;
+
+void *worker(void *arg)
+{
+    chunk *chunk = arg; // worker input back to chuck structure
 
     int previousCharacter = EOF;
     int currentCharacter = 0;
     int counter = 0;
+    FILE *readFile = arg;
 
-    if (argc < 2)
+    while ((currentCharacter = fgetc(readFile)) != EOF)
     {
-        printf("my-zip: file1 [file2 ...]\n");
-        return 1;
+        if (counter == 0)
+        {
+            previousCharacter = currentCharacter;
+            counter = 1;
+        }
+        else if (previousCharacter == currentCharacter)
+        {
+            counter++;
+        }
+        else
+        {
+            previousCharacter = currentCharacter;
+            counter = 1;
+        }
     }
+    return NULL;
+}
+int main(int argc, char *argv[])
+{
+    int fd;
+    char *addr;
+    off_t offset, pa_offset;
+    size_t length;
+    struct stat sb;
+
+    int availableThreads = get_nprocs(); // THIS TELLS THE PARALLELLISM^TM system how many cores/threads is available
+    pthread_t workers[availableThreads];
+    chunk chunks[availableThreads];
 
     for (size_t i = 1; i < argc; i++)
     {
-        readFile = fopen(argv[i], "r");
-
-        if (readFile == NULL)
         {
-            printf("my-zip: cannot open file\n");
-            exit(1);
+            fprintf(stderr, "%s file offset [length]\n", argv[0]);
+            exit(EXIT_FAILURE);
         }
 
-        // for loop for creating threads //TODO
-        int pthread_create(pthread_t * thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
+        fd = open(argv[1], O_RDONLY);
+        if (fd == -1)
+            handle_error("open");
 
-        while ((currentCharacter = fgetc(readFile)) != EOF)
+        if (fstat(fd, &sb) == -1) /* To obtain file size */
+            handle_error("fstat");
+
+        offset = atoi(argv[2]);
+        pa_offset = offset & ~(sysconf(_SC_PAGE_SIZE) - 1);
+        /* offset for mmap() must be page aligned */
+
+        if (offset >= sb.st_size)
         {
-            if (counter == 0)
-            {
-                previousCharacter = currentCharacter;
-                counter = 1;
-            }
-            else if (previousCharacter == currentCharacter)
-            {
-                counter++;
-            }
-            else
-            {
-                fwrite(&counter, sizeof(int), 1, stdout);
-                fwrite(&previousCharacter, sizeof(char), 1, stdout);
-                previousCharacter = currentCharacter;
-                counter = 1;
-            }
+            fprintf(stderr, "offset is past end of file\n");
+            exit(EXIT_FAILURE);
         }
-        fclose(readFile);
+
+        if (argc == 4)
+        {
+            length = atoi(argv[3]);
+            if (offset + length > sb.st_size)
+                length = sb.st_size - offset;
+            /* Can't display bytes past end of file */
+        }
+        else
+        { /* No length arg ==> display to end of file */
+            length = sb.st_size - offset;
+        }
+
+        addr = mmap(NULL, length + offset - pa_offset, PROT_READ,
+                    MAP_PRIVATE, fd, pa_offset);
+        if (addr == MAP_FAILED)
+            handle_error("mmap");
+
+        size_t chunk_size = length / availableThreads;
+
+        for (size_t i = 1; i < availableThreads; i++)
+        {
+            chunks[i].data = addr;
+            chunks[i].start = i * chunk_size;
+            chunks[i].end = (i == availableThreads - 1); // pls keksi tähän jtn järkeä
+            chunks[i].buff = malloc(chunks[i].end - chunks[i].start);
+            chunks[i].buffsize = 0;
+            pthread_create(&workers[i], NULL, worker, &chunks[i]);
+        }
     }
-    // joining for printing to stdout //TODO
-    int pthread_join(pthread_t thread, void **value_ptr);
-    if (counter > 0)
+    for (size_t i = 1; i < availableThreads; i++)
     {
-        fwrite(&counter, sizeof(int), 1, stdout);
-        fwrite(&previousCharacter, sizeof(char), 1, stdout);
+        pthread_join(workers[i], NULL);
+        write(STDOUT_FILENO, chunks[i].buff, chunks[i].buffsize);
+        free(chunks[i].buff);
     }
+
+    munmap(addr, length + offset - pa_offset);
+    close(fd);
+
+    exit(EXIT_SUCCESS);
     return (0);
 }
