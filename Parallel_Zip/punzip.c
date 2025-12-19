@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     for (size_t i = 1; i < argc; i++)
     {
         tasks[i - 1].filename = argv[i];
-        pthread_create(&workers[i], NULL, worker, &tasks[i]);
+        pthread_create(&workers[i - 1], NULL, worker, &tasks[i - 1]);
     }
     for (size_t i = 0; i < argc - 1; i++)
     {
