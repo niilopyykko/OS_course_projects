@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     {
         fp = fopen(argv[i], "r");
 
-        if (fp == NULL)
+        if (fp == NULL) // error
         {
             printf("my-grep: cannot open file\n");
             exit(1);

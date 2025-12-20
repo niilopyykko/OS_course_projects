@@ -5,7 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 
-void fileHandling(FILE *in, FILE *out);
+void fileHandling(FILE *in, FILE *out); // function declaration
 
 int main(int argc, char *argv[])
 {
